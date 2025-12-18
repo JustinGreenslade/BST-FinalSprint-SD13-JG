@@ -41,25 +41,33 @@ public class TreeController {
     }
 
     @PostMapping("/process-numbers")
+    public Map<String, Object> processNumbers(
+            @RequestBody List<Integer> numbers,
+            @RequestParam(required = false, defaultValue = "false") boolean balanced)
+            throws JsonProcessingException {
 
-    public Map<String, Object> processNumbers(@RequestBody List<Integer> numbers) throws JsonProcessingException {
+        int[] valuesArray = numbers.stream().mapToInt(Integer::intValue).toArray();
 
-        // changed my list<Interger> to int array for buildTree.
-        int[] valuesArray = new int[numbers.size()];
+        BinaryNode rootNode;
+        String treeType;
 
-        for (int i = 0; i < numbers.size(); i++) {
-            valuesArray[i] = numbers.get(i);
+        if (balanced) {
+            rootNode = bstService.buildBalancedTree(valuesArray);
+            treeType = "balanced";
+        } else {
+            rootNode = bstService.buildTree(valuesArray);
+            treeType = "sequential";
         }
 
-        BinaryNode rootNode = bstService.buildTree(valuesArray);
-
-        Map<String, Object> result = new LinkedHashMap<>(); //  new map to hold my final response wrapped in my root
+        Map<String, Object> result = new LinkedHashMap<>();
         result.put("root", nodeToMap(rootNode));
-        //  converts to a custom string to match figure 4 in project example
+
+        result.put("type", treeType);
+
         String inputStr = numbers.toString().replace("[", "").replace("]", "").trim();
-        // converts my results to json string for database storing
         String treeJsonStr = objectMapper.writeValueAsString(result);
-        TreeRecord record = new TreeRecord(inputStr, treeJsonStr);
+        String label = balanced ? inputStr + " (balanced)" : inputStr;
+        TreeRecord record = new TreeRecord(label, treeJsonStr);
         repository.save(record);
 
         return result;
@@ -71,3 +79,4 @@ public class TreeController {
         return repository.findAll();
     }
 }
+
